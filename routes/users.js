@@ -76,7 +76,56 @@ router.get(
 );
 
 // follow a user
+router.put(
+    '/:id/follow',
+    ctrlWrapper(async (req, res) => {
+        if (req.body.userId !== req.params.id) {
+            const user = await User.findById(req.params.id);
+            const currentUser = await User.findById(req.body.userId);
+            if (!user.followers.includes(req.body.userId)) {
+                await user.updateOne({ $push: { followers: req.body.userId } });
+                await currentUser.updateOne({
+                    $push: { followings: req.params.id },
+                });
+                res.status(200).json({
+                    status: 'success',
+                    code: 200,
+                    message: 'User has been followed successfully',
+                });
+            } else {
+                throw HttpError(403, 'You already follow this user');
+            }
+        } else {
+            throw HttpError(403, "You cant't follow yourself");
+        }
+    }),
+),
+    // unfollow a user
 
-// unfollow a user
-
-module.exports = router;
+    router.put(
+        '/:id/unfollow',
+        ctrlWrapper(async (req, res) => {
+            if (req.body.userId !== req.params.id) {
+                const user = await User.findById(req.params.id);
+                const currentUser = await User.findById(req.body.userId);
+                if (user.followers.includes(req.body.userId)) {
+                    await user.updateOne({
+                        $pull: { followers: req.body.userId },
+                    });
+                    await currentUser.updateOne({
+                        $pull: { followings: req.params.id },
+                    });
+                    res.status(200).json({
+                        status: 'success',
+                        code: 200,
+                        message: 'User has been unfollowed',
+                    });
+                } else {
+                    throw HttpError(403, "You don't follow this user");
+                }
+            } else {
+                throw HttpError(403, "You cant't unfollow yourself");
+            }
+        }),
+    ),
+    (module.exports = router);
