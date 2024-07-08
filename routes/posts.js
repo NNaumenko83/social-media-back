@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const Post = require('../models/Post');
-const ctrlWrapper = require('../helpers/ctrlWrapper');
+const User = require('../models/User');
+const { ctrlWrapper, HttpError } = require('../helpers');
 
 // create a post
 router.post(
@@ -49,7 +50,7 @@ router.delete(
             throw HttpError(404, 'Post not found');
         }
         if (post.userId === req.body.userId) {
-            await Post.findByIdAndDelete(req.params.id);
+            await post.deleteOne();
             res.status(200).json({
                 status: 'success',
                 code: 200,
@@ -61,20 +62,68 @@ router.delete(
     }),
 );
 // like a post
+router.put(
+    '/:id/like',
+    ctrlWrapper(async (req, res) => {
+        const post = await Post.findById(req.params.id);
+        if (!post) {
+            throw HttpError(404, 'Post not found');
+        }
+        if (!post.likes.includes(req.body.userId)) {
+            post.likes.push(req.body.userId);
+            await post.save();
+            res.status(200).json({
+                status: 'Success',
+                code: 200,
+                message: 'The post has been liked successfully',
+            });
+        } else {
+            await post.updateOne({ $pull: { likes: req.body.userId } });
+            res.status(200).json({
+                status: 'Success',
+                code: 200,
+                message: 'The post has been disliked successfully',
+            });
+        }
+    }),
+);
 // get a post
 
 router.get(
-    '/',
+    '/:id',
     ctrlWrapper(async (req, res) => {
-        const posts = await Post.find({});
+        const post = await Post.findById(req.params.id);
+        if (!post) {
+            throw HttpError(404, 'Post not found');
+        }
+
         res.status(200).json({
             status: 'success',
             code: 200,
-            data: posts,
+            data: post,
         });
     }),
 );
 
 // get timeline posts
+
+router.get(
+    '/timeline/all',
+    ctrlWrapper(async (req, res) => {
+        const currentUser = await User.findById(req.body.userId);
+        const userPosts = await Post.find({ userId: currentUser._id });
+        const friendPost = await Promise.all(
+            currentUser.followings.map((friendId) => {
+                return Post.find({ userId: friendId });
+            }),
+        );
+
+        res.status(200).json({
+            status: 'success',
+            code: 200,
+            data: userPosts.concat(...friendPost),
+        });
+    }),
+);
 
 module.exports = router;
