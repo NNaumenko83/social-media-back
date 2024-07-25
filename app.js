@@ -6,11 +6,12 @@ const morgan = require('morgan');
 const userRoute = require('./routes/users');
 const postRoute = require('./routes/posts');
 const authRoute = require('./routes/auth');
+const cors = require('cors');
 
 const app = express();
 
 // middleware
-
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(helmet());

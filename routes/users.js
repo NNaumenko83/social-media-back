@@ -58,9 +58,14 @@ router.delete(
 // get a user
 
 router.get(
-    '/:id',
+    '/',
     ctrlWrapper(async (req, res, next) => {
-        const user = await User.findById(req.params.id);
+        const userId = req.query.userId;
+        const username = req.query.username;
+        console.log('username:', username);
+        const user = userId
+            ? await User.findById(userId)
+            : await User.findOne({ username: username });
         if (!user) {
             throw HttpError(404, 'User not found');
         }
